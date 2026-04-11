@@ -35,21 +35,6 @@ uvicorn main:app --reload --port 9000
 alembic upgrade head
 alembic downgrade -1
 ```
-
-## Environment Variables
-
-- `DATABASE_URL` (default: `sqlite+aiosqlite:///./template_service.db`)
-- `FILES_SERVICE_BASE_URL` (default: `http://localhost:8001`)
-- `FILES_SERVICE_DOWNLOAD_PATH_TEMPLATE` (default: `/files/{file_id}`)
-- `FILES_SERVICE_UPLOAD_URL_PATH` (default: `/upload`)
-- `FILES_SERVICE_AUTH_TOKEN` (default: empty)
-- `FILES_SERVICE_TIMEOUT_SECONDS` (default: `20`)
-- `FILES_SERVICE_VERIFY_TLS` (default: `true`)
-- `FILES_SERVICE_UPLOAD_BUCKET` (default: `AI_DOCUMENTS`)
-- `FILES_SERVICE_UPLOADER_ID` (default: empty)
-- `TEMPLATE_CACHE_TTL_SECONDS` (default: `300`)
-- `AUTO_CREATE_TABLES` (default: `true`)
-
 ## API Endpoints
 
 - `POST /templates`
