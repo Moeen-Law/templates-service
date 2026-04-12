@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="DEBUG")
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
-    log_format: str = Field(default="json", alias="LOG_FORMAT")
+    log_format: str = Field(default="text", alias="LOG_FORMAT")
     log_file_path: str = Field(
         default="logs/template-service.log", alias="LOG_FILE_PATH"
     )

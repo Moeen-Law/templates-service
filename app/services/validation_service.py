@@ -1,8 +1,11 @@
 from datetime import date
+import logging
 from typing import Any
 
 from app.models.template import TemplateField
 from app.schemas.common import FieldType
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationService:
@@ -11,6 +14,11 @@ class ValidationService:
         fields: list[TemplateField],
         data: dict[str, Any],
     ) -> list[dict[str, str]]:
+        logger.debug(
+            "Validating contract data fields=%s provided_keys=%s",
+            len(fields),
+            sorted(data.keys()),
+        )
         errors: list[dict[str, str]] = []
         field_map = {field.name: field for field in fields}
 
@@ -55,6 +63,10 @@ class ValidationService:
                     }
                 )
 
+        if errors:
+            logger.debug("Validation produced errors count=%s", len(errors))
+        else:
+            logger.debug("Validation completed successfully")
         return errors
 
     @staticmethod

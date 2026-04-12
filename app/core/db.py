@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -8,16 +10,22 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config import get_settings
 from app.models.base import Base
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 engine: AsyncEngine = create_async_engine(settings.database_url, echo=False)
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def get_db_session() -> AsyncSession:
+    logger.debug("Opening database session")
     async with SessionLocal() as session:
         yield session
+    logger.debug("Database session closed")
 
 
 async def init_db() -> None:
+    logger.info("Initializing database schema")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database schema initialization completed")

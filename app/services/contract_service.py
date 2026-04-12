@@ -1,8 +1,12 @@
+import logging
+
 from app.core.exceptions import ValidationError
 from app.integrations.file_service import FileServiceClient
 from app.services.render_service import RenderService
 from app.services.template_service import TemplateService
 from app.services.validation_service import ValidationService
+
+logger = logging.getLogger(__name__)
 
 
 class ContractService:
@@ -17,16 +21,37 @@ class ContractService:
         self._validation_service = ValidationService()
 
     async def generate_contract(self, template_id: str, data: dict) -> str:
+        logger.info(
+            "Contract generation started template_id=%s data_keys=%s",
+            template_id,
+            sorted(data.keys()),
+        )
         template = await self._template_service.get_template_for_generation(template_id)
+        logger.debug(
+            "Template loaded for generation template_id=%s fields=%s",
+            template.template_id,
+            len(template.fields),
+        )
 
         validation_errors = self._validation_service.validate_data(
             template.fields, data
         )
         if validation_errors:
+            logger.warning(
+                "Contract validation failed template_id=%s errors_count=%s",
+                template_id,
+                len(validation_errors),
+            )
             raise ValidationError(validation_errors)
 
         template_bytes = await self._file_service_client.download_template(
             template.file_id
+        )
+        logger.debug(
+            "Template file downloaded template_id=%s file_id=%s size_bytes=%s",
+            template_id,
+            template.file_id,
+            len(template_bytes),
         )
         placeholder_errors = self._validate_placeholders(
             template_placeholders=self._render_service.extract_placeholders(
@@ -35,12 +60,27 @@ class ContractService:
             field_names={field.name for field in template.fields},
         )
         if placeholder_errors:
+            logger.warning(
+                "Template placeholder validation failed template_id=%s errors_count=%s",
+                template_id,
+                len(placeholder_errors),
+            )
             raise ValidationError(placeholder_errors)
 
         rendered = self._render_service.render_docx(template_bytes, data)
+        logger.debug(
+            "Template rendered template_id=%s output_size_bytes=%s",
+            template_id,
+            len(rendered),
+        )
         generated_file_id = await self._file_service_client.upload_document(
             filename=f"{template.name}.docx",
             content=rendered,
+        )
+        logger.info(
+            "Contract generation completed template_id=%s generated_file_id=%s",
+            template_id,
+            generated_file_id,
         )
         return generated_file_id
 
