@@ -8,8 +8,14 @@ from sqlalchemy.orm import selectinload
 from app.cache.in_memory import InMemoryCache
 from app.core.config import get_settings
 from app.core.exceptions import TemplateNotFoundError
+from app.integrations.file_service import FileServiceClient
 from app.models.template import DocumentTemplate, TemplateField
-from app.schemas.template import TemplateCreate, TemplateRead, TemplateUpdate
+from app.schemas.template import (
+    TemplateCreate,
+    TemplateFieldCreate,
+    TemplateRead,
+    TemplateUpdate,
+)
 
 settings = get_settings()
 _template_cache: InMemoryCache["TemplateContractData"] = InMemoryCache(
@@ -27,8 +33,13 @@ class TemplateContractData:
 
 
 class TemplateService:
-    def __init__(self, session: AsyncSession):
+    def __init__(
+        self,
+        session: AsyncSession,
+        file_service_client: FileServiceClient | None = None,
+    ):
         self._session = session
+        self._file_service_client = file_service_client
 
     async def create_template(self, payload: TemplateCreate) -> TemplateRead:
         logger.info(
@@ -54,6 +65,32 @@ class TemplateService:
         await self._session.refresh(template)
         logger.info("Template created template_id=%s", template.id)
         return TemplateRead.model_validate(template)
+
+    async def create_template_with_file(
+        self,
+        *,
+        name: str,
+        description: str | None,
+        fields: list[TemplateFieldCreate],
+        filename: str,
+        content: bytes,
+        content_type: str | None = None,
+    ) -> TemplateRead:
+        if self._file_service_client is None:
+            raise RuntimeError("File service client is not configured")
+
+        file_id = await self._file_service_client.upload_template_file(
+            filename=filename,
+            content=content,
+            content_type=content_type,
+        )
+        payload = TemplateCreate(
+            name=name,
+            description=description,
+            file_id=file_id,
+            fields=fields,
+        )
+        return await self.create_template(payload)
 
     async def list_templates(self) -> list[TemplateRead]:
         logger.debug("Listing templates")

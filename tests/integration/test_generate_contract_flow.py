@@ -1,4 +1,5 @@
 from io import BytesIO
+import json
 
 from docx import Document
 from fastapi.testclient import TestClient
@@ -108,3 +109,61 @@ def test_generate_contract_returns_validation_errors(monkeypatch):
         assert generate_response.status_code == 422
         errors = generate_response.json()["errors"]
         assert {item["type"] for item in errors} == {"missing_field", "invalid_type"}
+
+
+def test_create_template_with_file_upload_flow(monkeypatch):
+    template_bytes = _build_template_docx_bytes()
+
+    captured: dict[str, object] = {}
+
+    async def fake_upload_template_file(
+        self,
+        filename: str,
+        content: bytes,
+        content_type: str | None = None,
+    ) -> str:
+        captured["filename"] = filename
+        captured["content_type"] = content_type
+        captured["content_size"] = len(content)
+        return "uploaded-template-file-id"
+
+    monkeypatch.setattr(
+        FileServiceClient,
+        "upload_template_file",
+        fake_upload_template_file,
+    )
+
+    with TestClient(app) as client:
+        create_response = client.post(
+            "/templates",
+            data={
+                "name": "Employment Contract Uploaded",
+                "description": "Uploaded through multipart",
+                "fields": json.dumps(
+                    [
+                        {"name": "client_name", "type": "string", "required": True},
+                        {
+                            "name": "company_name",
+                            "type": "string",
+                            "required": True,
+                        },
+                        {"name": "start_date", "type": "date", "required": True},
+                    ]
+                ),
+            },
+            files={
+                "file": (
+                    "employment_contract.docx",
+                    template_bytes,
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                )
+            },
+        )
+
+    assert create_response.status_code == 201
+    payload = create_response.json()
+    assert payload["file_id"] == "uploaded-template-file-id"
+    assert payload["name"] == "Employment Contract Uploaded"
+    assert len(payload["fields"]) == 3
+    assert captured["filename"] == "employment_contract.docx"
+    assert captured["content_size"] == len(template_bytes)
