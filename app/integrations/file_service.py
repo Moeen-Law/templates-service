@@ -159,8 +159,6 @@ class FileServiceClient:
         )
         payload = {
             "fileName": filename,
-            "filename": filename,
-            "contentType": content_type,
             "mimeType": content_type,
             "bucket": self._settings.files_service_upload_bucket,
         }
