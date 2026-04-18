@@ -54,6 +54,29 @@ This service supports loading runtime settings from HashiCorp Vault KV v2.
 When enabled, Vault values are injected into environment variables before app
 settings and Alembic migrations are initialized.
 
+### Environment Indicator
+
+Use `ENVIRONMENT` outside Vault (in process env or `.env`) as the source of truth
+for selecting config context.
+
+- `ENVIRONMENT=dev` or `ENVIRONMENT=development` -> loads `.env` then `.env.dev`
+- `ENVIRONMENT=prod` or `ENVIRONMENT=production` -> loads `.env` then `.env.prod`
+
+Recommended layout:
+
+- `.env`: shared values and Vault connection/auth settings
+- `.env.dev`: development overrides (for example `VAULT_KV_PATH=templates/dev`)
+- `.env.prod`: production overrides (for example `VAULT_KV_PATH=templates/prod`)
+
+Precedence for determining the environment:
+
+1. Process environment variable `ENVIRONMENT`
+2. `ENVIRONMENT` value in `.env`
+3. Default `development`
+
+Vault should contain runtime secrets for the selected environment, but should not
+be the primary selector of the environment itself.
+
 ### Expected Secret Shape (JSON)
 
 Store the secret as a flat JSON object where keys are environment variable names:
@@ -71,6 +94,7 @@ Store the secret as a flat JSON object where keys are environment variable names
 Set these in your deployment environment:
 
 ```env
+ENVIRONMENT=prod
 VAULT_ENABLED=true
 VAULT_ADDR=https://vault.moeenlaw.com
 VAULT_TOKEN=<vault-token>

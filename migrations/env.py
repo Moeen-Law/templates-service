@@ -6,7 +6,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.core.config import Settings
+from app.core.config import get_current_environment, load_settings_for_environment
 from app.core.vault import load_vault_secrets_into_environment
 from app.models.base import Base
 from app.models.template import DocumentTemplate, TemplateField
@@ -16,7 +16,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-bootstrap_settings = Settings()
+current_environment = get_current_environment()
+bootstrap_settings = load_settings_for_environment(current_environment)
 load_vault_secrets_into_environment(
     enabled=bootstrap_settings.vault_enabled,
     vault_addr=bootstrap_settings.vault_addr,

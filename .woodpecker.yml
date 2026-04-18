@@ -1,0 +1,85 @@
+when:
+    - event: [push, manual, cron]
+      branch: main
+
+steps:
+    version:
+        image: python:3.12-slim
+        commands:
+            - |
+                VERSION=$(python - <<'PY'
+                import re
+                from pathlib import Path
+
+                version = None
+
+                init_file = Path("app/__init__.py")
+                if init_file.exists():
+                    match = re.search(
+                        r'__version__\s*=\s*"([^"]+)"',
+                        init_file.read_text(encoding="utf-8"),
+                    )
+                    if match:
+                        version = match.group(1)
+
+                if version is None:
+                    config_file = Path("app/core/config.py")
+                    if config_file.exists():
+                        match = re.search(
+                            r'version:\s*str\s*=\s*Field\(default="([^"]+)"',
+                            config_file.read_text(encoding="utf-8"),
+                        )
+                        if match:
+                            version = match.group(1)
+
+                print(version or "0.1.0")
+                PY
+                )
+                printf "%s\nlatest\n" "$VERSION" > .tags
+
+    build-and-push:
+        image: woodpeckerci/plugin-docker-buildx
+        settings:
+            repo: registry.moeenlaw.com/templates-service
+            dockerfile: Dockerfile
+            context: .
+            tags_file: .tags
+            registry: registry.moeenlaw.com
+            username:
+                from_secret: REGISTRY_USERNAME
+            password:
+                from_secret: REGISTRY_PASSWORD
+
+    notify-success:
+        image: appleboy/drone-discord
+        settings:
+            webhook_id:
+                from_secret: DISCORD_WEBHOOK_ID
+            webhook_token:
+                from_secret: DISCORD_WEBHOOK_TOKEN
+            message: |
+                ✅ **Build Succeeded:** `${CI_REPO_OWNER}/${CI_REPO_NAME}` (Build #${CI_PIPELINE_NUMBER})
+                **Branch:** `${CI_COMMIT_BRANCH:-${CI_COMMIT_TAG}}`
+                **Author:** `${CI_COMMIT_AUTHOR}`
+                **Author Email**: `${CI_COMMIT_AUTHOR_EMAIL}`
+                **Commit:** `${CI_COMMIT_MESSAGE}`
+                **Link:** ${CI_PIPELINE_URL}
+        when:
+            - status: [success]
+
+    notify-failure:
+        image: appleboy/drone-discord
+        settings:
+            webhook_id:
+                from_secret: DISCORD_WEBHOOK_ID
+            webhook_token:
+                from_secret: DISCORD_WEBHOOK_TOKEN
+            message: |
+                🚨 **Build Failed:** `${CI_REPO_OWNER}/${CI_REPO_NAME}` (Build #${CI_PIPELINE_NUMBER})
+                **Branch:** `${CI_COMMIT_BRANCH:-${CI_COMMIT_TAG}}`
+                **Author:** `${CI_COMMIT_AUTHOR}`
+                **Author Email**: `${CI_COMMIT_AUTHOR_EMAIL}`
+                **Commit:** `${CI_COMMIT_MESSAGE}`
+                **Link:** ${CI_PIPELINE_URL}
+        when:
+            - status: [failure]
