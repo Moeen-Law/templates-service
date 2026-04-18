@@ -21,7 +21,9 @@ bootstrap_settings = load_settings_for_environment(current_environment)
 load_vault_secrets_into_environment(
     enabled=bootstrap_settings.vault_enabled,
     vault_addr=bootstrap_settings.vault_addr,
-    vault_token=bootstrap_settings.vault_token,
+    vault_role_id=bootstrap_settings.vault_role_id,
+    vault_secret_id=bootstrap_settings.vault_secret_id,
+    vault_auth_path=bootstrap_settings.vault_auth_path,
     kv_mount=bootstrap_settings.vault_kv_mount,
     kv_path=bootstrap_settings.vault_kv_path,
     timeout_seconds=bootstrap_settings.vault_timeout_seconds,

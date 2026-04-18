@@ -97,7 +97,9 @@ Set these in your deployment environment:
 ENVIRONMENT=prod
 VAULT_ENABLED=true
 VAULT_ADDR=https://vault.moeenlaw.com
-VAULT_TOKEN=<vault-token>
+VAULT_ROLE_ID=<approle-role-id>
+VAULT_SECRET_ID=<approle-secret-id>
+VAULT_AUTH_PATH=approle
 VAULT_KV_MOUNT=env
 VAULT_KV_PATH=templates/dev
 VAULT_FAIL_FAST=true
@@ -118,8 +120,10 @@ VAULT_CACERT=
 2. Ensure a KV v2 secrets engine exists at mount path `env`.
 3. Create secret path `templates/dev` under that mount.
 4. Add required runtime keys (for example `DATABASE_URL` and `FILES_SERVICE_AUTH_TOKEN`) and save.
-5. Create or use a token that has read permission on `env/data/templates/dev`.
-6. Put that token in deployment variable `VAULT_TOKEN`.
+5. Enable AppRole auth method (path `approle`) if it is not already enabled.
+6. Create an AppRole with read permission on `env/data/templates/dev`.
+7. Retrieve the role ID and generate a secret ID for that AppRole.
+8. Put them in deployment variables `VAULT_ROLE_ID` and `VAULT_SECRET_ID`.
 
 ### Notes
 

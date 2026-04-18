@@ -65,7 +65,9 @@ def load_vault_secrets_into_environment(
     *,
     enabled: bool | str | None = None,
     vault_addr: str | None = None,
-    vault_token: str | None = None,
+    vault_role_id: str | None = None,
+    vault_secret_id: str | None = None,
+    vault_auth_path: str | None = None,
     kv_mount: str | None = None,
     kv_path: str | None = None,
     timeout_seconds: float | str | None = None,
@@ -95,7 +97,19 @@ def load_vault_secrets_into_environment(
     resolved_vault_addr = _resolve_str(
         explicit=vault_addr, env_var="VAULT_ADDR"
     ).rstrip("/")
-    resolved_vault_token = _resolve_str(explicit=vault_token, env_var="VAULT_TOKEN")
+    resolved_vault_role_id = _resolve_str(
+        explicit=vault_role_id,
+        env_var="VAULT_ROLE_ID",
+    )
+    resolved_vault_secret_id = _resolve_str(
+        explicit=vault_secret_id,
+        env_var="VAULT_SECRET_ID",
+    )
+    resolved_vault_auth_path = _resolve_str(
+        explicit=vault_auth_path,
+        env_var="VAULT_AUTH_PATH",
+        default="approle",
+    ).strip("/")
     resolved_kv_mount = _resolve_str(
         explicit=kv_mount,
         env_var="VAULT_KV_MOUNT",
@@ -118,9 +132,15 @@ def load_vault_secrets_into_environment(
             fail_fast=resolved_fail_fast,
         )
         return
-    if not resolved_vault_token:
+    if not resolved_vault_role_id:
         _handle_vault_failure(
-            "Vault is enabled but VAULT_TOKEN is not set",
+            "Vault is enabled but VAULT_ROLE_ID is not set",
+            fail_fast=resolved_fail_fast,
+        )
+        return
+    if not resolved_vault_secret_id:
+        _handle_vault_failure(
+            "Vault is enabled but VAULT_SECRET_ID is not set",
             fail_fast=resolved_fail_fast,
         )
         return
@@ -132,7 +152,10 @@ def load_vault_secrets_into_environment(
         return
 
     endpoint = f"{resolved_vault_addr}/v1/{resolved_kv_mount}/data/{resolved_kv_path}"
-    headers = {"X-Vault-Token": resolved_vault_token}
+    approle_login_endpoint = (
+        f"{resolved_vault_addr}/v1/auth/{resolved_vault_auth_path}/login"
+    )
+    headers: dict[str, str] = {}
     if resolved_namespace:
         headers["X-Vault-Namespace"] = resolved_namespace
 
@@ -150,7 +173,24 @@ def load_vault_secrets_into_environment(
                 ca_cert_path=resolved_ca_cert_path,
             ),
         ) as client:
-            response = client.get(endpoint, headers=headers)
+            auth_response = client.post(
+                approle_login_endpoint,
+                json={
+                    "role_id": resolved_vault_role_id,
+                    "secret_id": resolved_vault_secret_id,
+                },
+                headers=headers,
+            )
+            auth_response.raise_for_status()
+            auth_payload = auth_response.json()
+            client_token = auth_payload.get("auth", {}).get("client_token")
+            if not client_token:
+                raise RuntimeError(
+                    "Vault AppRole login response missing auth.client_token"
+                )
+
+            read_headers = {**headers, "X-Vault-Token": str(client_token)}
+            response = client.get(endpoint, headers=read_headers)
             response.raise_for_status()
             response_payload = response.json()
     except Exception as exc:

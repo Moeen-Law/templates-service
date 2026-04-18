@@ -11,7 +11,9 @@ def reset_vault_env(monkeypatch: pytest.MonkeyPatch):
     keys_to_clear = [
         "VAULT_ENABLED",
         "VAULT_ADDR",
-        "VAULT_TOKEN",
+        "VAULT_ROLE_ID",
+        "VAULT_SECRET_ID",
+        "VAULT_AUTH_PATH",
         "VAULT_KV_MOUNT",
         "VAULT_KV_PATH",
         "VAULT_NAMESPACE",
@@ -53,9 +55,24 @@ def test_loads_kv_v2_secret_into_environment(monkeypatch: pytest.MonkeyPatch):
         def __exit__(self, exc_type, exc, tb):
             return False
 
+        def post(
+            self, url: str, json: dict[str, str], headers: dict[str, str]
+        ) -> _FakeResponse:
+            assert url == "https://vault.example.com/v1/auth/approle/login"
+            assert json["role_id"] == "role-id-value"
+            assert json["secret_id"] == "secret-id-value"
+            assert "X-Vault-Token" not in headers
+            return _FakeResponse(
+                {
+                    "auth": {
+                        "client_token": "client-token-value",
+                    }
+                }
+            )
+
         def get(self, url: str, headers: dict[str, str]) -> _FakeResponse:
             assert url == "https://vault.example.com/v1/env/data/templates/dev"
-            assert headers["X-Vault-Token"] == "token-value"
+            assert headers["X-Vault-Token"] == "client-token-value"
             return _FakeResponse(
                 {
                     "data": {
@@ -70,7 +87,8 @@ def test_loads_kv_v2_secret_into_environment(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setenv("VAULT_ENABLED", "true")
     monkeypatch.setenv("VAULT_ADDR", "https://vault.example.com")
-    monkeypatch.setenv("VAULT_TOKEN", "token-value")
+    monkeypatch.setenv("VAULT_ROLE_ID", "role-id-value")
+    monkeypatch.setenv("VAULT_SECRET_ID", "secret-id-value")
     monkeypatch.setenv("VAULT_KV_MOUNT", "env")
     monkeypatch.setenv("VAULT_KV_PATH", "templates/dev")
     monkeypatch.setenv("VAULT_TIMEOUT_SECONDS", "15")
@@ -83,20 +101,22 @@ def test_loads_kv_v2_secret_into_environment(monkeypatch: pytest.MonkeyPatch):
     assert os.environ["NESTED"] == '{"feature":true}'
 
 
-def test_raises_when_required_token_is_missing(monkeypatch: pytest.MonkeyPatch):
+def test_raises_when_required_secret_id_is_missing(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("VAULT_ENABLED", "true")
     monkeypatch.setenv("VAULT_ADDR", "https://vault.example.com")
+    monkeypatch.setenv("VAULT_ROLE_ID", "role-id-value")
     monkeypatch.setenv("VAULT_KV_MOUNT", "env")
     monkeypatch.setenv("VAULT_KV_PATH", "templates/dev")
     monkeypatch.setenv("VAULT_FAIL_FAST", "true")
 
-    with pytest.raises(RuntimeError, match="VAULT_TOKEN"):
+    with pytest.raises(RuntimeError, match="VAULT_SECRET_ID"):
         vault.load_vault_secrets_into_environment()
 
 
 def test_does_not_raise_when_fail_fast_disabled(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("VAULT_ENABLED", "true")
     monkeypatch.setenv("VAULT_ADDR", "https://vault.example.com")
+    monkeypatch.setenv("VAULT_ROLE_ID", "role-id-value")
     monkeypatch.setenv("VAULT_KV_MOUNT", "env")
     monkeypatch.setenv("VAULT_KV_PATH", "templates/dev")
     monkeypatch.setenv("VAULT_FAIL_FAST", "false")

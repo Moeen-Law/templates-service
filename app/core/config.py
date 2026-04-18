@@ -84,7 +84,9 @@ class Settings(BaseSettings):
 
     vault_enabled: bool = Field(default=False, alias="VAULT_ENABLED")
     vault_addr: str = Field(default="", alias="VAULT_ADDR")
-    vault_token: str = Field(default="", alias="VAULT_TOKEN")
+    vault_role_id: str = Field(default="", alias="VAULT_ROLE_ID")
+    vault_secret_id: str = Field(default="", alias="VAULT_SECRET_ID")
+    vault_auth_path: str = Field(default="approle", alias="VAULT_AUTH_PATH")
     vault_kv_mount: str = Field(default="secret", alias="VAULT_KV_MOUNT")
     vault_kv_path: str = Field(default="", alias="VAULT_KV_PATH")
     vault_namespace: str = Field(default="", alias="VAULT_NAMESPACE")
@@ -163,7 +165,9 @@ def get_settings() -> Settings:
     load_vault_secrets_into_environment(
         enabled=bootstrap_settings.vault_enabled,
         vault_addr=bootstrap_settings.vault_addr,
-        vault_token=bootstrap_settings.vault_token,
+        vault_role_id=bootstrap_settings.vault_role_id,
+        vault_secret_id=bootstrap_settings.vault_secret_id,
+        vault_auth_path=bootstrap_settings.vault_auth_path,
         kv_mount=bootstrap_settings.vault_kv_mount,
         kv_path=bootstrap_settings.vault_kv_path,
         timeout_seconds=bootstrap_settings.vault_timeout_seconds,

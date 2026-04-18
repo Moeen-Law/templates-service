@@ -7,7 +7,9 @@ from app.core import config
 class _FakeSettings:
     vault_enabled: bool
     vault_addr: str = "https://vault.example.com"
-    vault_token: str = "token"
+    vault_role_id: str = "role-id"
+    vault_secret_id: str = "secret-id"
+    vault_auth_path: str = "approle"
     vault_kv_mount: str = "env"
     vault_kv_path: str = "templates/dev"
     vault_namespace: str = ""
@@ -24,8 +26,8 @@ def test_get_settings_uses_bootstrap_vault_values(monkeypatch):
     calls: list[dict] = []
     env_calls: list[str] = []
     settings_instances = [
-        _FakeSettings(vault_enabled=True, vault_token="bootstrap-token"),
-        _FakeSettings(vault_enabled=True, vault_token="resolved-token"),
+        _FakeSettings(vault_enabled=True, vault_role_id="bootstrap-role"),
+        _FakeSettings(vault_enabled=True, vault_role_id="resolved-role"),
     ]
 
     def fake_get_current_environment() -> str:
@@ -52,10 +54,10 @@ def test_get_settings_uses_bootstrap_vault_values(monkeypatch):
 
     resolved = config.get_settings()
 
-    assert resolved.vault_token == "resolved-token"
+    assert resolved.vault_role_id == "resolved-role"
     assert len(calls) == 1
     assert calls[0]["enabled"] is True
-    assert calls[0]["vault_token"] == "bootstrap-token"
+    assert calls[0]["vault_role_id"] == "bootstrap-role"
     assert env_calls == ["production", "production"]
 
     config.get_settings.cache_clear()
@@ -66,7 +68,11 @@ def test_get_settings_returns_bootstrap_when_vault_disabled(monkeypatch):
 
     calls: list[dict] = []
     env_calls: list[str] = []
-    bootstrap = _FakeSettings(vault_enabled=False, vault_token="")
+    bootstrap = _FakeSettings(
+        vault_enabled=False,
+        vault_role_id="",
+        vault_secret_id="",
+    )
 
     def fake_get_current_environment() -> str:
         return "development"
