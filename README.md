@@ -48,6 +48,61 @@ Set `DATABASE_URL` in `.env`:
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/template_service
 ```
 
+## Vault Secrets (Deployment)
+
+This service supports loading runtime settings from HashiCorp Vault KV v2.
+When enabled, Vault values are injected into environment variables before app
+settings and Alembic migrations are initialized.
+
+### Expected Secret Shape (JSON)
+
+Store the secret as a flat JSON object where keys are environment variable names:
+
+```json
+{
+	"DATABASE_URL": "postgresql+asyncpg://user:password@db-host:5432/template_service",
+	"FILES_SERVICE_AUTH_TOKEN": "your-production-token",
+	"FILES_SERVICE_BASE_URL": "https://gateway.example.com"
+}
+```
+
+### App Environment Variables
+
+Set these in your deployment environment:
+
+```env
+VAULT_ENABLED=true
+VAULT_ADDR=https://vault.moeenlaw.com
+VAULT_TOKEN=<vault-token>
+VAULT_KV_MOUNT=env
+VAULT_KV_PATH=templates/dev
+VAULT_FAIL_FAST=true
+```
+
+Optional:
+
+```env
+VAULT_NAMESPACE=
+VAULT_TIMEOUT_SECONDS=10
+VAULT_SKIP_VERIFY=false
+VAULT_CACERT=
+```
+
+### What You Need To Do In Vault (Website/UI)
+
+1. Sign in to Vault UI.
+2. Ensure a KV v2 secrets engine exists at mount path `env`.
+3. Create secret path `templates/dev` under that mount.
+4. Add required runtime keys (for example `DATABASE_URL` and `FILES_SERVICE_AUTH_TOKEN`) and save.
+5. Create or use a token that has read permission on `env/data/templates/dev`.
+6. Put that token in deployment variable `VAULT_TOKEN`.
+
+### Notes
+
+- With `VAULT_FAIL_FAST=true`, the service fails startup if Vault cannot be read.
+- The same Vault loading flow is used by Alembic migrations, so migration
+	commands can read `DATABASE_URL` from Vault too.
+
 ## Migrations (Alembic)
 
 ```bash

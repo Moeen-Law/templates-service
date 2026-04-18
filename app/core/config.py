@@ -3,6 +3,8 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.vault import load_vault_secrets_into_environment
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -33,6 +35,17 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
         description="Async SQLAlchemy URL (PostgreSQL recommended)",
     )
+
+    vault_enabled: bool = Field(default=False, alias="VAULT_ENABLED")
+    vault_addr: str = Field(default="", alias="VAULT_ADDR")
+    vault_token: str = Field(default="", alias="VAULT_TOKEN")
+    vault_kv_mount: str = Field(default="secret", alias="VAULT_KV_MOUNT")
+    vault_kv_path: str = Field(default="", alias="VAULT_KV_PATH")
+    vault_namespace: str = Field(default="", alias="VAULT_NAMESPACE")
+    vault_timeout_seconds: float = Field(default=10, alias="VAULT_TIMEOUT_SECONDS")
+    vault_fail_fast: bool = Field(default=True, alias="VAULT_FAIL_FAST")
+    vault_skip_verify: bool = Field(default=False, alias="VAULT_SKIP_VERIFY")
+    vault_cacert: str = Field(default="", alias="VAULT_CACERT")
 
     files_service_base_url: str = Field(
         default="http://localhost:8001",
@@ -70,4 +83,19 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    bootstrap_settings = Settings()
+    load_vault_secrets_into_environment(
+        enabled=bootstrap_settings.vault_enabled,
+        vault_addr=bootstrap_settings.vault_addr,
+        vault_token=bootstrap_settings.vault_token,
+        kv_mount=bootstrap_settings.vault_kv_mount,
+        kv_path=bootstrap_settings.vault_kv_path,
+        timeout_seconds=bootstrap_settings.vault_timeout_seconds,
+        namespace=bootstrap_settings.vault_namespace,
+        fail_fast=bootstrap_settings.vault_fail_fast,
+        skip_verify=bootstrap_settings.vault_skip_verify,
+        ca_cert_path=bootstrap_settings.vault_cacert,
+    )
+    if bootstrap_settings.vault_enabled:
+        return Settings()
+    return bootstrap_settings

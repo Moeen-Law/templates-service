@@ -6,6 +6,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from app.core.config import Settings
+from app.core.vault import load_vault_secrets_into_environment
 from app.models.base import Base
 from app.models.template import DocumentTemplate, TemplateField
 
@@ -13,6 +15,22 @@ config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+bootstrap_settings = Settings()
+load_vault_secrets_into_environment(
+    enabled=bootstrap_settings.vault_enabled,
+    vault_addr=bootstrap_settings.vault_addr,
+    vault_token=bootstrap_settings.vault_token,
+    kv_mount=bootstrap_settings.vault_kv_mount,
+    kv_path=bootstrap_settings.vault_kv_path,
+    timeout_seconds=bootstrap_settings.vault_timeout_seconds,
+    namespace=bootstrap_settings.vault_namespace,
+    fail_fast=bootstrap_settings.vault_fail_fast,
+    skip_verify=bootstrap_settings.vault_skip_verify,
+    ca_cert_path=bootstrap_settings.vault_cacert,
+)
+if "DATABASE_URL" not in os.environ and bootstrap_settings.database_url:
+    os.environ["DATABASE_URL"] = bootstrap_settings.database_url
 
 
 def _get_sync_database_url() -> str:
