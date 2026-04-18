@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     vault_secret_id: str = Field(default="", alias="VAULT_SECRET_ID")
     vault_auth_path: str = Field(default="approle", alias="VAULT_AUTH_PATH")
     vault_kv_mount: str = Field(default="secret", alias="VAULT_KV_MOUNT")
-    vault_kv_path: str = Field(default="", alias="VAULT_KV_PATH")
+    vault_kv_path: str = Field(default="templates/dev", alias="VAULT_KV_PATH")
     vault_namespace: str = Field(default="", alias="VAULT_NAMESPACE")
     vault_timeout_seconds: float = Field(default=10, alias="VAULT_TIMEOUT_SECONDS")
     vault_fail_fast: bool = Field(default=True, alias="VAULT_FAIL_FAST")
