@@ -113,7 +113,7 @@ def load_vault_secrets_into_environment(
     resolved_kv_mount = _resolve_str(
         explicit=kv_mount,
         env_var="VAULT_KV_MOUNT",
-        default="secret",
+        default="env",
     ).strip("/")
     resolved_kv_path = _resolve_str(explicit=kv_path, env_var="VAULT_KV_PATH").strip(
         "/"

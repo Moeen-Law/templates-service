@@ -122,3 +122,42 @@ def test_does_not_raise_when_fail_fast_disabled(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setenv("VAULT_FAIL_FAST", "false")
 
     vault.load_vault_secrets_into_environment()
+
+
+def test_defaults_to_env_mount_when_not_provided(monkeypatch: pytest.MonkeyPatch):
+    class _FakeClient:
+        def __init__(self, timeout: float, verify: bool):
+            assert timeout == 10.0
+            assert verify is True
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def post(
+            self, url: str, json: dict[str, str], headers: dict[str, str]
+        ) -> _FakeResponse:
+            assert url == "https://vault.example.com/v1/auth/approle/login"
+            return _FakeResponse(
+                {
+                    "auth": {
+                        "client_token": "client-token-value",
+                    }
+                }
+            )
+
+        def get(self, url: str, headers: dict[str, str]) -> _FakeResponse:
+            assert url == "https://vault.example.com/v1/env/data/templates/dev"
+            return _FakeResponse({"data": {"data": {}}})
+
+    monkeypatch.setenv("VAULT_ENABLED", "true")
+    monkeypatch.setenv("VAULT_ADDR", "https://vault.example.com")
+    monkeypatch.setenv("VAULT_ROLE_ID", "role-id-value")
+    monkeypatch.setenv("VAULT_SECRET_ID", "secret-id-value")
+    monkeypatch.setenv("VAULT_KV_PATH", "templates/dev")
+    monkeypatch.delenv("VAULT_KV_MOUNT", raising=False)
+    monkeypatch.setattr(vault.httpx, "Client", _FakeClient)
+
+    vault.load_vault_secrets_into_environment()
