@@ -29,6 +29,25 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 9000
 ```
 
+## Database (PostgreSQL)
+
+This service is configured to use PostgreSQL by default.
+
+```bash
+docker run --name template-service-postgres \
+	-e POSTGRES_USER=postgres \
+	-e POSTGRES_PASSWORD=postgres \
+	-e POSTGRES_DB=template_service \
+	-p 5432:5432 \
+	-d postgres:16-alpine
+```
+
+Set `DATABASE_URL` in `.env`:
+
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/template_service
+```
+
 ## Migrations (Alembic)
 
 ```bash

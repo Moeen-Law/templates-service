@@ -29,9 +29,9 @@ class Settings(BaseSettings):
     api_v1_prefix: str = Field(default="/v1", alias="API_V1_PREFIX")
 
     database_url: str = Field(
-        default="sqlite+aiosqlite:///./template_service.db",
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/template_service",
         alias="DATABASE_URL",
-        description="Async SQLAlchemy URL",
+        description="Async SQLAlchemy URL (PostgreSQL recommended)",
     )
 
     files_service_base_url: str = Field(
