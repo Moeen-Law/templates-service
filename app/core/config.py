@@ -82,7 +82,7 @@ class Settings(BaseSettings):
         description="Async SQLAlchemy URL (PostgreSQL recommended)",
     )
 
-    vault_enabled: bool = Field(default=False, alias="VAULT_ENABLED")
+    vault_enabled: bool = Field(default=True, alias="VAULT_ENABLED")
     vault_addr: str = Field(default="", alias="VAULT_ADDR")
     vault_role_id: str = Field(default="", alias="VAULT_ROLE_ID")
     vault_secret_id: str = Field(default="", alias="VAULT_SECRET_ID")
