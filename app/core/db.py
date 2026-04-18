@@ -1,4 +1,5 @@
 import logging
+import os
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.models.base import Base
@@ -13,7 +15,11 @@ from app.models.base import Base
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
-engine: AsyncEngine = create_async_engine(settings.database_url, echo=False)
+_engine_kwargs: dict[str, object] = {"echo": False}
+if os.getenv("PYTEST_CURRENT_TEST") is not None:
+    _engine_kwargs["poolclass"] = NullPool
+
+engine: AsyncEngine = create_async_engine(settings.database_url, **_engine_kwargs)
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
