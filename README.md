@@ -150,7 +150,7 @@ This project now supports the nested format below directly from Vault:
 	"consul": {
 		"check": {
 			"deregisterCriticalServiceAfter": "1m",
-			"http": "",
+			"http": "http://moeenlaw.com:9009/health",
 			"interval": "15s",
 			"timeout": "5s"
 		},
