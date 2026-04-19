@@ -131,6 +131,70 @@ VAULT_CACERT=
 - The same Vault loading flow is used by Alembic migrations, so migration
 	commands can read `DATABASE_URL` from Vault too.
 
+## Consul Service Registry
+
+This service supports automatic registration and deregistration in Consul during
+application startup and shutdown.
+
+- Registration endpoint: `PUT /v1/agent/service/register`
+- Deregistration endpoint: `PUT /v1/agent/service/deregister/:service_id`
+- Health check target defaults to `http://127.0.0.1:${PORT}/health` when not
+	explicitly configured.
+
+### Vault Secret Format (Nested `consul` object)
+
+This project now supports the nested format below directly from Vault:
+
+```json
+{
+	"consul": {
+		"check": {
+			"deregisterCriticalServiceAfter": "1m",
+			"http": "",
+			"interval": "15s",
+			"timeout": "5s"
+		},
+		"host": "discovery.moeenlaw.com",
+		"port": "443",
+		"schema": "https",
+		"secure": true,
+		"serviceName": "template-service",
+		"token": "<consul-acl-token>"
+	}
+}
+```
+
+The Vault loader injects the top-level `consul` key as an environment variable,
+and the settings layer maps it to typed `CONSUL_*` runtime fields.
+
+### Optional Flat Environment Variables
+
+Flat variables are also supported and take precedence over nested `consul`
+values when both are present.
+
+```env
+CONSUL_ENABLED=true
+CONSUL_FAIL_FAST=true
+CONSUL_HOST=discovery.moeenlaw.com
+CONSUL_PORT=443
+CONSUL_SCHEME=https
+CONSUL_SECURE=true
+CONSUL_TOKEN=<consul-acl-token>
+CONSUL_SERVICE_NAME=template-service
+CONSUL_SERVICE_ID=
+CONSUL_SERVICE_ADDRESS=
+CONSUL_CHECK_HTTP=
+CONSUL_CHECK_INTERVAL=15s
+CONSUL_CHECK_TIMEOUT=5s
+CONSUL_CHECK_DEREGISTER_CRITICAL_SERVICE_AFTER=1m
+```
+
+### ACL Requirements
+
+- Registration and deregistration require a token with `service:write`.
+- If registration should not block startup in non-critical environments, set
+	`CONSUL_FAIL_FAST=false`.
+
 ## Migrations (Alembic)
 
 ```bash

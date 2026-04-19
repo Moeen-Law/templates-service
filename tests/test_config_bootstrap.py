@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from app.core import config
@@ -116,3 +117,65 @@ def test_get_current_environment_prefers_process_env(monkeypatch):
 def test_get_environment_env_files_maps_aliases():
     assert config.get_environment_env_files("dev") == (".env", ".env.dev")
     assert config.get_environment_env_files("production") == (".env", ".env.prod")
+
+
+def test_settings_supports_nested_consul_blob(monkeypatch):
+    monkeypatch.delenv("CONSUL_ENABLED", raising=False)
+    monkeypatch.delenv("CONSUL_HOST", raising=False)
+    monkeypatch.delenv("CONSUL_PORT", raising=False)
+    monkeypatch.delenv("CONSUL_SCHEME", raising=False)
+    monkeypatch.delenv("CONSUL_SERVICE_NAME", raising=False)
+    monkeypatch.delenv("CONSUL_TOKEN", raising=False)
+    monkeypatch.delenv("consul", raising=False)
+    monkeypatch.delenv("CONSUL", raising=False)
+
+    monkeypatch.setenv(
+        "consul",
+        json.dumps(
+            {
+                "host": "discovery.moeenlaw.com",
+                "port": "443",
+                "schema": "https",
+                "secure": True,
+                "serviceName": "template-service",
+                "token": "test-token",
+                "check": {
+                    "deregisterCriticalServiceAfter": "1m",
+                    "http": "",
+                    "interval": "15s",
+                    "timeout": "5s",
+                },
+            }
+        ),
+    )
+
+    settings = config.Settings()
+
+    assert settings.consul_enabled is True
+    assert settings.consul_host == "discovery.moeenlaw.com"
+    assert settings.consul_port == 443
+    assert settings.consul_scheme == "https"
+    assert settings.consul_secure is True
+    assert settings.consul_service_name == "template-service"
+    assert settings.consul_token == "test-token"
+    assert settings.consul_check_interval == "15s"
+    assert settings.consul_check_timeout == "5s"
+    assert settings.consul_check_deregister_critical_service_after == "1m"
+
+
+def test_flat_consul_env_overrides_nested_blob(monkeypatch):
+    monkeypatch.setenv(
+        "consul",
+        json.dumps(
+            {
+                "host": "discovery.moeenlaw.com",
+                "port": "443",
+                "schema": "https",
+            }
+        ),
+    )
+    monkeypatch.setenv("CONSUL_HOST", "consul-override.moeenlaw.com")
+
+    settings = config.Settings()
+
+    assert settings.consul_host == "consul-override.moeenlaw.com"

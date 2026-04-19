@@ -1,8 +1,11 @@
 import os
+import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, field_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.vault import load_vault_secrets_into_environment
@@ -50,6 +53,25 @@ def _read_dotenv_value(file_path: str, key: str) -> str | None:
             value = value[1:-1]
         return value
     return None
+
+
+def _read_consul_blob_from_environment() -> dict[str, Any] | None:
+    raw_consul = os.getenv("CONSUL")
+    if raw_consul is None:
+        raw_consul = os.getenv("consul")
+
+    if raw_consul is None or not raw_consul.strip():
+        return None
+
+    try:
+        payload = json.loads(raw_consul)
+    except json.JSONDecodeError as exc:
+        raise ValueError("CONSUL/consul must be a valid JSON object") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("CONSUL/consul must be a JSON object")
+
+    return payload
 
 
 class Settings(BaseSettings):
@@ -128,10 +150,76 @@ class Settings(BaseSettings):
     )
     auto_create_tables: bool = Field(default=True, alias="AUTO_CREATE_TABLES")
 
+    consul_enabled: bool = Field(default=False, alias="CONSUL_ENABLED")
+    consul_fail_fast: bool = Field(default=True, alias="CONSUL_FAIL_FAST")
+    consul_host: str = Field(default="", alias="CONSUL_HOST")
+    consul_port: int = Field(default=8500, alias="CONSUL_PORT")
+    consul_scheme: str = Field(default="http", alias="CONSUL_SCHEME")
+    consul_secure: bool = Field(default=False, alias="CONSUL_SECURE")
+    consul_token: str = Field(default="", alias="CONSUL_TOKEN")
+    consul_service_name: str = Field(default="", alias="CONSUL_SERVICE_NAME")
+    consul_service_id: str = Field(default="", alias="CONSUL_SERVICE_ID")
+    consul_service_address: str = Field(default="", alias="CONSUL_SERVICE_ADDRESS")
+    consul_check_http: str = Field(default="", alias="CONSUL_CHECK_HTTP")
+    consul_check_interval: str = Field(default="15s", alias="CONSUL_CHECK_INTERVAL")
+    consul_check_timeout: str = Field(default="5s", alias="CONSUL_CHECK_TIMEOUT")
+    consul_check_deregister_critical_service_after: str = Field(
+        default="1m",
+        alias="CONSUL_CHECK_DEREGISTER_CRITICAL_SERVICE_AFTER",
+    )
+
+    @model_validator(mode="after")
+    def _merge_consul_blob(self):
+        consul_blob = _read_consul_blob_from_environment()
+        if consul_blob is None:
+            return self
+
+        fields_set = set(self.model_fields_set)
+
+        def apply_if_unset(field_name: str, value: Any) -> None:
+            if value is None or field_name in fields_set:
+                return
+            setattr(self, field_name, value)
+
+        check = consul_blob.get("check", {})
+        if not isinstance(check, dict):
+            check = {}
+
+        apply_if_unset("consul_enabled", True)
+        apply_if_unset("consul_host", consul_blob.get("host"))
+
+        raw_port = consul_blob.get("port")
+        if raw_port is not None and "consul_port" not in fields_set:
+            apply_if_unset("consul_port", int(raw_port))
+
+        apply_if_unset("consul_scheme", consul_blob.get("schema"))
+        apply_if_unset("consul_secure", consul_blob.get("secure"))
+        apply_if_unset("consul_service_name", consul_blob.get("serviceName"))
+        apply_if_unset("consul_token", consul_blob.get("token"))
+        apply_if_unset("consul_check_http", check.get("http"))
+        apply_if_unset("consul_check_interval", check.get("interval"))
+        apply_if_unset("consul_check_timeout", check.get("timeout"))
+        apply_if_unset(
+            "consul_check_deregister_critical_service_after",
+            check.get("deregisterCriticalServiceAfter"),
+        )
+
+        return self
+
     @field_validator("environment", mode="before")
     @classmethod
     def _normalize_environment_field(cls, value: str | None) -> str:
         return _normalize_environment(value)
+
+    @field_validator("consul_scheme", mode="before")
+    @classmethod
+    def _normalize_consul_scheme(cls, value: str | None) -> str:
+        if value is None:
+            return "http"
+        normalized = value.strip().lower()
+        if normalized not in {"http", "https"}:
+            raise ValueError("CONSUL_SCHEME must be either 'http' or 'https'")
+        return normalized
 
 
 def get_current_environment() -> str:

@@ -14,6 +14,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.logging_config import configure_logging
+from app.integrations.consul_registry import ConsulServiceRegistry
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -22,12 +23,30 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     settings = get_settings()
+    consul_registry: ConsulServiceRegistry | None = None
     logger.info("Application startup started")
     if settings.auto_create_tables:
         logger.info("Auto-create tables is enabled, initializing database")
         await init_db()
+
+    if settings.consul_enabled:
+        consul_registry = ConsulServiceRegistry(settings)
+        try:
+            await consul_registry.register()
+        except Exception:
+            logger.exception("Consul registration failed")
+            if settings.consul_fail_fast:
+                raise
+
     logger.info("Application startup completed")
     yield
+
+    if consul_registry is not None:
+        try:
+            await consul_registry.deregister()
+        except Exception:
+            logger.exception("Consul deregistration failed")
+
     logger.info("Application shutdown completed")
 
 
