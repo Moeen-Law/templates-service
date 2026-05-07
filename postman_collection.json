@@ -1,0 +1,168 @@
+{
+    "info": {
+        "name": "Template Service API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:9000"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{baseUrl}}/health",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "health"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "List Templates",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{baseUrl}}/templates",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "templates"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Create Template",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"عقد إيجار\",\n  \"description\": \"نموذج عقد إيجار باللغة العربية\",\n  \"markdown_content\": \"# عقد إيجار\\n\\n---\\n\\n**الشقة:** {{ apartment }}\\n\\n**بداية العقد:** {{ start_date }} | **نهاية العقد:** {{ end_date }}\\n\\n**نوع الإيجار:** {{ rental_type }}\\n\\n**مبلغ الإيجار اليومي/ الشهري:** {{ rental_amount }}\\n\\n**التكلفة الإجمالية:** {{ total_cost }}\\n\\n---\\n\\n## العميل\\n\\n**اسم العميل:** {{ client_name }}\\n\\n**رقم إثبات الهوية:** {{ id_number }}\\n\\n**رقم الهاتف:** {{ phone }}\\n\\n**الجنسية:** {{ nationality }}\\n\\n**نوعه:** {{ gender }}\\n\\n---\\n\\n## الشروط\\n\\n{% for condition in conditions %}\\n\\n- {{ condition }}\\n  {% endfor %}\\n\\n---\\n\\n**توقيع المستأجر:** {{ tenant_signature }} | **توقيع المسؤول:** {{ manager_signature }}\\n\",\n  \"fields\": [\n    { \"name\": \"apartment\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"start_date\", \"type\": \"date\", \"required\": true },\n    { \"name\": \"end_date\", \"type\": \"date\", \"required\": true },\n    { \"name\": \"rental_type\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"rental_amount\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"total_cost\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"client_name\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"id_number\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"phone\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"nationality\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"gender\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"conditions\", \"type\": \"array\", \"required\": true },\n    { \"name\": \"tenant_signature\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"manager_signature\", \"type\": \"string\", \"required\": true }\n  ]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/templates",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "templates"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Get Template",
+            "request": {
+                "method": "GET",
+                "url": {
+                    "raw": "{{baseUrl}}/templates/{{template_id}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "templates",
+                        "{{template_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Update Template",
+            "request": {
+                "method": "PUT",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"عقد إيجار (محدث)\",\n  \"description\": \"تحديث طفيف على المحتوى\",\n  \"markdown_content\": \"# عقد إيجار\\n\\n**الشقة:** {{ apartment }}\\n\\n---\\n\\n**توقيع المستأجر:** {{ tenant_signature }} | **توقيع المسؤول:** {{ manager_signature }}\\n\",\n  \"fields\": [\n    { \"name\": \"apartment\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"tenant_signature\", \"type\": \"string\", \"required\": true },\n    { \"name\": \"manager_signature\", \"type\": \"string\", \"required\": true }\n  ]\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/templates/{{template_id}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "templates",
+                        "{{template_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Delete Template",
+            "request": {
+                "method": "DELETE",
+                "url": {
+                    "raw": "{{baseUrl}}/templates/{{template_id}}",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "templates",
+                        "{{template_id}}"
+                    ]
+                }
+            }
+        },
+        {
+            "name": "Generate Contract",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"template_id\": \"{{template_id}}\",\n  \"data\": {\n    \"apartment\": \"شقة ١٢، مبنى الياسمين\",\n    \"start_date\": \"2025-03-01\",\n    \"end_date\": \"2025-09-01\",\n    \"rental_type\": \"شهري\",\n    \"rental_amount\": \"٢٥٠٠ دينار شهريا\",\n    \"total_cost\": \"1550 دينار\",\n    \"client_name\": \"أحمد سالم\",\n    \"id_number\": \"أ١٢٣٤٥٦٧٨A\",\n    \"phone\": \"+201111293264\",\n    \"nationality\": \"أردني\",\n    \"gender\": \"ذكر\",\n    \"conditions\": [\n      \"الالتزام بسداد الإيجار في اليوم الخامس من كل شهر\",\n      \"عدم إجراء أي تعديل في الشقة دون موافقة خطية من المالك\",\n      \"المحافظة على نظافة الشقة والأجزاء المشتركة في المبنى\",\n      \"عدم استخدام الشقة لأي نشاط تجاري\"\n    ],\n    \"tenant_signature\": \"أحمد سالم\",\n    \"manager_signature\": \"محمد العزام\"\n  }\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{baseUrl}}/contracts/generate",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "contracts",
+                        "generate"
+                    ]
+                }
+            }
+        }
+    ]
+}

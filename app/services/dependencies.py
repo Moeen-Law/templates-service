@@ -10,10 +10,7 @@ from app.services.template_service import TemplateService
 def get_template_service(
     session: AsyncSession = Depends(get_db_session),
 ) -> TemplateService:
-    return TemplateService(
-        session=session,
-        file_service_client=FileServiceClient(),
-    )
+    return TemplateService(session=session)
 
 
 def get_contract_service(
@@ -22,7 +19,6 @@ def get_contract_service(
     return ContractService(
         template_service=TemplateService(
             session=session,
-            file_service_client=FileServiceClient(),
         ),
         file_service_client=FileServiceClient(),
     )

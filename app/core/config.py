@@ -10,7 +10,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.vault import load_vault_secrets_into_environment
 
-
 _ENVIRONMENT_ALIASES: dict[str, str] = {
     "dev": "development",
     "development": "development",
@@ -120,10 +119,6 @@ class Settings(BaseSettings):
     files_service_base_url: str = Field(
         default="http://localhost:8001",
         alias="FILES_SERVICE_BASE_URL",
-    )
-    files_service_download_path_template: str = Field(
-        default="/files/{file_id}",
-        alias="FILES_SERVICE_DOWNLOAD_PATH_TEMPLATE",
     )
     files_service_upload_url_path: str = Field(
         default="/upload",

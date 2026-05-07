@@ -1,14 +1,14 @@
 # Template Service
 
-Async FastAPI microservice for contract template CRUD, strict data validation, DOCX rendering, and file-service upload integration.
+Async FastAPI microservice for contract template CRUD, strict data validation, Markdown-based RTL DOCX rendering, and file-service upload integration.
 
 ## Features
 
-- Template CRUD with field schema management
+- Template CRUD with field schema management and markdown content
 - Strict contract input validation (missing, extra, empty, type mismatch)
 - Placeholder/schema drift checks before rendering
-- DOCX rendering with Jinja syntax via `docxtpl`
-- Async integration with File Service
+- Markdown templates rendered with Jinja2 and `python-docx` (RTL)
+- Async integration with File Service for generated documents
 - In-memory metadata cache for generation path
 
 ## Structure

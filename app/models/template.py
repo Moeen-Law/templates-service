@@ -9,7 +9,7 @@ class DocumentTemplate(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    file_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    markdown_content: Mapped[str] = mapped_column(Text, nullable=False)
 
     fields: Mapped[list["TemplateField"]] = relationship(
         "TemplateField",

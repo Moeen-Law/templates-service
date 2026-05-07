@@ -44,18 +44,9 @@ class ContractService:
             )
             raise ValidationError(validation_errors)
 
-        template_bytes = await self._file_service_client.download_template(
-            template.file_id
-        )
-        logger.debug(
-            "Template file downloaded template_id=%s file_id=%s size_bytes=%s",
-            template_id,
-            template.file_id,
-            len(template_bytes),
-        )
         placeholder_errors = self._validate_placeholders(
             template_placeholders=self._render_service.extract_placeholders(
-                template_bytes
+                template.markdown_content
             ),
             field_names={field.name for field in template.fields},
         )
@@ -67,7 +58,10 @@ class ContractService:
             )
             raise ValidationError(placeholder_errors)
 
-        rendered = self._render_service.render_docx(template_bytes, data)
+        rendered = self._render_service.render_docx(
+            template.markdown_content,
+            data,
+        )
         logger.debug(
             "Template rendered template_id=%s output_size_bytes=%s",
             template_id,

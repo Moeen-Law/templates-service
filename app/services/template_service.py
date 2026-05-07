@@ -8,11 +8,9 @@ from sqlalchemy.orm import selectinload
 from app.cache.in_memory import InMemoryCache
 from app.core.config import get_settings
 from app.core.exceptions import TemplateNotFoundError
-from app.integrations.file_service import FileServiceClient
 from app.models.template import DocumentTemplate, TemplateField
 from app.schemas.template import (
     TemplateCreate,
-    TemplateFieldCreate,
     TemplateRead,
     TemplateUpdate,
 )
@@ -28,18 +26,13 @@ logger = logging.getLogger(__name__)
 class TemplateContractData:
     template_id: str
     name: str
-    file_id: str
+    markdown_content: str
     fields: list[TemplateField]
 
 
 class TemplateService:
-    def __init__(
-        self,
-        session: AsyncSession,
-        file_service_client: FileServiceClient | None = None,
-    ):
+    def __init__(self, session: AsyncSession):
         self._session = session
-        self._file_service_client = file_service_client
 
     async def create_template(self, payload: TemplateCreate) -> TemplateRead:
         logger.info(
@@ -48,7 +41,7 @@ class TemplateService:
         template = DocumentTemplate(
             name=payload.name,
             description=payload.description,
-            file_id=payload.file_id,
+            markdown_content=payload.markdown_content,
             fields=[
                 TemplateField(
                     name=field.name,
@@ -65,32 +58,6 @@ class TemplateService:
         await self._session.refresh(template)
         logger.info("Template created template_id=%s", template.id)
         return TemplateRead.model_validate(template)
-
-    async def create_template_with_file(
-        self,
-        *,
-        name: str,
-        description: str | None,
-        fields: list[TemplateFieldCreate],
-        filename: str,
-        content: bytes,
-        content_type: str | None = None,
-    ) -> TemplateRead:
-        if self._file_service_client is None:
-            raise RuntimeError("File service client is not configured")
-
-        file_id = await self._file_service_client.upload_template_file(
-            filename=filename,
-            content=content,
-            content_type=content_type,
-        )
-        payload = TemplateCreate(
-            name=name,
-            description=description,
-            file_id=file_id,
-            fields=fields,
-        )
-        return await self.create_template(payload)
 
     async def list_templates(self) -> list[TemplateRead]:
         logger.debug("Listing templates")
@@ -120,7 +87,7 @@ class TemplateService:
         data = TemplateContractData(
             template_id=template.id,
             name=template.name,
-            file_id=template.file_id,
+            markdown_content=template.markdown_content,
             fields=template.fields,
         )
         _template_cache.set(cache_key, data)
@@ -137,8 +104,8 @@ class TemplateService:
             template.name = payload.name
         if payload.description is not None:
             template.description = payload.description
-        if payload.file_id is not None:
-            template.file_id = payload.file_id
+        if payload.markdown_content is not None:
+            template.markdown_content = payload.markdown_content
         if payload.fields is not None:
             template.fields = [
                 TemplateField(

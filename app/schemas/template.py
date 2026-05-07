@@ -23,14 +23,14 @@ class TemplateFieldRead(TemplateFieldBase, ORMBaseModel):
 class TemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
-    file_id: str = Field(min_length=1, max_length=255)
+    markdown_content: str = Field(min_length=1)
     fields: list[TemplateFieldCreate]
 
 
 class TemplateUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
-    file_id: str | None = Field(default=None, min_length=1, max_length=255)
+    markdown_content: str | None = Field(default=None, min_length=1)
     fields: list[TemplateFieldCreate] | None = None
 
 
@@ -38,7 +38,7 @@ class TemplateRead(TimestampSchema):
     id: str
     name: str
     description: str | None
-    file_id: str
+    markdown_content: str
     fields: list[TemplateFieldRead]
 
 
