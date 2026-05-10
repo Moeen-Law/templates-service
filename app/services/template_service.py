@@ -141,5 +141,5 @@ class TemplateService:
         template = await self._session.scalar(stmt)
         if template is None:
             logger.warning("Template not found in database template_id=%s", template_id)
-            raise TemplateNotFoundError(f"Template '{template_id}' not found")
+            raise TemplateNotFoundError(f"Template not found")
         return template
