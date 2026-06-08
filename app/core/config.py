@@ -73,6 +73,39 @@ def _read_consul_blob_from_environment() -> dict[str, Any] | None:
     return payload
 
 
+def _normalize_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return []
+
+        if stripped.startswith("["):
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise ValueError("Expected a JSON array or comma-separated string") from exc
+            return _normalize_string_list(parsed)
+
+        return [item.strip() for item in stripped.split(",") if item.strip()]
+
+    if isinstance(value, (list, tuple, set)):
+        normalized: list[str] = []
+        for item in value:
+            text = str(item).strip()
+            if text:
+                normalized.append(text)
+        return normalized
+
+    raise ValueError("Expected a list of strings")
+
+
+def _default_consul_tag_for_environment(environment: str) -> str:
+    return "prod" if environment == "production" else "dev"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=None,
@@ -155,6 +188,12 @@ class Settings(BaseSettings):
     consul_service_name: str = Field(default="", alias="CONSUL_SERVICE_NAME")
     consul_service_id: str = Field(default="", alias="CONSUL_SERVICE_ID")
     consul_service_address: str = Field(default="", alias="CONSUL_SERVICE_ADDRESS")
+    consul_registration_tags: list[str] = Field(
+        default_factory=list, alias="CONSUL_REGISTRATION_TAGS"
+    )
+    consul_query_tags: list[str] = Field(
+        default_factory=list, alias="CONSUL_QUERY_TAGS"
+    )
     consul_check_http: str = Field(default="", alias="CONSUL_CHECK_HTTP")
     consul_check_interval: str = Field(default="15s", alias="CONSUL_CHECK_INTERVAL")
     consul_check_timeout: str = Field(default="5s", alias="CONSUL_CHECK_TIMEOUT")
@@ -166,10 +205,9 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _merge_consul_blob(self):
         consul_blob = _read_consul_blob_from_environment()
-        if consul_blob is None:
-            return self
-
         fields_set = set(self.model_fields_set)
+        if consul_blob is None:
+            consul_blob = {}
 
         def apply_if_unset(field_name: str, value: Any) -> None:
             if value is None or field_name in fields_set:
@@ -180,24 +218,36 @@ class Settings(BaseSettings):
         if not isinstance(check, dict):
             check = {}
 
-        apply_if_unset("consul_enabled", True)
-        apply_if_unset("consul_host", consul_blob.get("host"))
+        if consul_blob:
+            apply_if_unset("consul_enabled", True)
+            apply_if_unset("consul_host", consul_blob.get("host"))
 
-        raw_port = consul_blob.get("port")
-        if raw_port is not None and "consul_port" not in fields_set:
-            apply_if_unset("consul_port", int(raw_port))
+            raw_port = consul_blob.get("port")
+            if raw_port is not None and "consul_port" not in fields_set:
+                apply_if_unset("consul_port", int(raw_port))
 
-        apply_if_unset("consul_scheme", consul_blob.get("schema"))
-        apply_if_unset("consul_secure", consul_blob.get("secure"))
-        apply_if_unset("consul_service_name", consul_blob.get("serviceName"))
-        apply_if_unset("consul_token", consul_blob.get("token"))
-        apply_if_unset("consul_check_http", check.get("http"))
-        apply_if_unset("consul_check_interval", check.get("interval"))
-        apply_if_unset("consul_check_timeout", check.get("timeout"))
-        apply_if_unset(
-            "consul_check_deregister_critical_service_after",
-            check.get("deregisterCriticalServiceAfter"),
-        )
+            apply_if_unset("consul_scheme", consul_blob.get("schema"))
+            apply_if_unset("consul_secure", consul_blob.get("secure"))
+            apply_if_unset("consul_service_name", consul_blob.get("serviceName"))
+            apply_if_unset("consul_token", consul_blob.get("token"))
+            apply_if_unset("consul_registration_tags", consul_blob.get("tags"))
+            apply_if_unset("consul_query_tags", consul_blob.get("queryTags"))
+            apply_if_unset("consul_check_http", check.get("http"))
+            apply_if_unset("consul_check_interval", check.get("interval"))
+            apply_if_unset("consul_check_timeout", check.get("timeout"))
+            apply_if_unset(
+                "consul_check_deregister_critical_service_after",
+                check.get("deregisterCriticalServiceAfter"),
+            )
+
+        default_tag = _default_consul_tag_for_environment(self.environment)
+        if (
+            "consul_registration_tags" not in fields_set
+            and not self.consul_registration_tags
+        ):
+            self.consul_registration_tags = [default_tag]
+        if "consul_query_tags" not in fields_set and not self.consul_query_tags:
+            self.consul_query_tags = [default_tag]
 
         return self
 
@@ -215,6 +265,11 @@ class Settings(BaseSettings):
         if normalized not in {"http", "https"}:
             raise ValueError("CONSUL_SCHEME must be either 'http' or 'https'")
         return normalized
+
+    @field_validator("consul_registration_tags", "consul_query_tags", mode="before")
+    @classmethod
+    def _normalize_consul_tags(cls, value: Any) -> list[str]:
+        return _normalize_string_list(value)
 
 
 def get_current_environment() -> str:

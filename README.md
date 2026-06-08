@@ -140,6 +140,8 @@ application startup and shutdown.
 - Deregistration endpoint: `PUT /v1/agent/service/deregister/:service_id`
 - Health check target defaults to `http://127.0.0.1:${PORT}/health` when not
 	explicitly configured.
+- Registration tags and discovery query tags default to `dev`.
+- When `ENVIRONMENT=production` (or `prod`), both defaults switch to `prod`.
 
 ### Vault Secret Format (Nested `consul` object)
 
@@ -156,9 +158,11 @@ This project now supports the nested format below directly from Vault:
 		},
 		"host": "discovery.moeenlaw.com",
 		"port": "443",
+		"queryTags": ["dev"],
 		"schema": "https",
 		"secure": true,
 		"serviceName": "template-service",
+		"tags": ["dev"],
 		"token": "<consul-acl-token>"
 	}
 }
@@ -183,11 +187,16 @@ CONSUL_TOKEN=<consul-acl-token>
 CONSUL_SERVICE_NAME=template-service
 CONSUL_SERVICE_ID=
 CONSUL_SERVICE_ADDRESS=
+CONSUL_REGISTRATION_TAGS=dev
+CONSUL_QUERY_TAGS=dev
 CONSUL_CHECK_HTTP=
 CONSUL_CHECK_INTERVAL=15s
 CONSUL_CHECK_TIMEOUT=5s
 CONSUL_CHECK_DEREGISTER_CRITICAL_SERVICE_AFTER=1m
 ```
+
+`CONSUL_REGISTRATION_TAGS` and `CONSUL_QUERY_TAGS` accept either comma-separated
+values or JSON arrays.
 
 ### ACL Requirements
 

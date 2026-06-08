@@ -120,12 +120,15 @@ def test_get_environment_env_files_maps_aliases():
 
 
 def test_settings_supports_nested_consul_blob(monkeypatch):
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
     monkeypatch.delenv("CONSUL_ENABLED", raising=False)
     monkeypatch.delenv("CONSUL_HOST", raising=False)
     monkeypatch.delenv("CONSUL_PORT", raising=False)
     monkeypatch.delenv("CONSUL_SCHEME", raising=False)
     monkeypatch.delenv("CONSUL_SERVICE_NAME", raising=False)
     monkeypatch.delenv("CONSUL_TOKEN", raising=False)
+    monkeypatch.delenv("CONSUL_REGISTRATION_TAGS", raising=False)
+    monkeypatch.delenv("CONSUL_QUERY_TAGS", raising=False)
     monkeypatch.delenv("consul", raising=False)
     monkeypatch.delenv("CONSUL", raising=False)
 
@@ -139,6 +142,8 @@ def test_settings_supports_nested_consul_blob(monkeypatch):
                 "secure": True,
                 "serviceName": "template-service",
                 "token": "test-token",
+                "tags": ["dev"],
+                "queryTags": ["dev"],
                 "check": {
                     "deregisterCriticalServiceAfter": "1m",
                     "http": "",
@@ -158,6 +163,8 @@ def test_settings_supports_nested_consul_blob(monkeypatch):
     assert settings.consul_secure is True
     assert settings.consul_service_name == "template-service"
     assert settings.consul_token == "test-token"
+    assert settings.consul_registration_tags == ["dev"]
+    assert settings.consul_query_tags == ["dev"]
     assert settings.consul_check_interval == "15s"
     assert settings.consul_check_timeout == "5s"
     assert settings.consul_check_deregister_critical_service_after == "1m"
@@ -179,3 +186,34 @@ def test_flat_consul_env_overrides_nested_blob(monkeypatch):
     settings = config.Settings()
 
     assert settings.consul_host == "consul-override.moeenlaw.com"
+
+
+def test_settings_default_consul_tags_follow_environment(monkeypatch):
+    monkeypatch.delenv("CONSUL_REGISTRATION_TAGS", raising=False)
+    monkeypatch.delenv("CONSUL_QUERY_TAGS", raising=False)
+    monkeypatch.delenv("consul", raising=False)
+    monkeypatch.delenv("CONSUL", raising=False)
+
+    monkeypatch.setenv("ENVIRONMENT", "dev")
+    development_settings = config.Settings()
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    production_settings = config.Settings()
+
+    assert development_settings.consul_registration_tags == ["dev"]
+    assert development_settings.consul_query_tags == ["dev"]
+    assert production_settings.consul_registration_tags == ["prod"]
+    assert production_settings.consul_query_tags == ["prod"]
+
+
+def test_flat_consul_tag_env_overrides_profile_defaults(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("CONSUL_REGISTRATION_TAGS", "blue,green")
+    monkeypatch.setenv("CONSUL_QUERY_TAGS", '["canary"]')
+    monkeypatch.delenv("consul", raising=False)
+    monkeypatch.delenv("CONSUL", raising=False)
+
+    settings = config.Settings()
+
+    assert settings.consul_registration_tags == ["blue", "green"]
+    assert settings.consul_query_tags == ["canary"]

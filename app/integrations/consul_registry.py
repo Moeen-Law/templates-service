@@ -62,6 +62,7 @@ class ConsulServiceRegistry:
             "ID": self._service_id,
             "Name": self._service_name,
             "Port": self._settings.port,
+            "Tags": self._settings.consul_registration_tags,
             "Check": {
                 "HTTP": self._resolve_check_http(),
                 "Interval": self._settings.consul_check_interval,

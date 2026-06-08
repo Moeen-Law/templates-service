@@ -21,6 +21,8 @@ def _build_settings() -> SimpleNamespace:
         consul_service_name="template-service",
         consul_service_id="",
         consul_service_address="",
+        consul_registration_tags=["dev"],
+        consul_query_tags=["dev"],
         consul_check_http="",
         consul_check_interval="15s",
         consul_check_timeout="5s",
@@ -71,6 +73,7 @@ async def test_register_service_uses_expected_payload(monkeypatch):
     assert payload is not None
     assert payload["Name"] == "template-service"
     assert payload["Port"] == 9000
+    assert payload["Tags"] == ["dev"]
     assert payload["Check"] == {
         "HTTP": "http://127.0.0.1:9000/health",
         "Interval": "15s",
